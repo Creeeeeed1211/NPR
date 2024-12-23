@@ -1,4 +1,4 @@
-﻿#include <SDL.h>
+#include <SDL.h>
 #include <iostream>
 #include <cmath>
 #include <algorithm> // for std::min and std::max
@@ -139,9 +139,9 @@ void overlayTexture(SDL_Surface* surface, const char* texturePath) {
             SDL_GetRGB(texPixel, texture->format, &texR, &texG, &texB);
 
             // Simple blending (adjust blending weights as needed)
-            Uint8 finalR = (srcR * 1 + texR * 0.1);
-            Uint8 finalG = (srcG * 1 + texG * 0.1);
-            Uint8 finalB = (srcB * 1 + texB * 0.1);
+            Uint8 finalR = (srcR * 1 + texR * 0.01);
+            Uint8 finalG = (srcG * 1 + texG * 0.01);
+            Uint8 finalB = (srcB * 1 + texB * 0.01);
 
             pixels[y * pitch + x] = SDL_MapRGB(surface->format, finalR, finalG, finalB);
         }
@@ -149,6 +149,7 @@ void overlayTexture(SDL_Surface* surface, const char* texturePath) {
 
     SDL_FreeSurface(texture);
 }
+
 
 
 
