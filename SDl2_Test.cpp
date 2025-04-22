@@ -1,10 +1,10 @@
 #include <SDL.h>
 #include <iostream>
 #include <cmath>
-#include <algorithm> // for std::min and std::max
+#include <algorithm> 
 #include<vector>    
-#include <sys/stat.h> // For mkdir
-#include <sys/types.h> // For stat
+#include <sys/stat.h> 
+#include <sys/types.h> 
 #include <filesystem>
 #include <sstream>
 #include <map>
@@ -16,6 +16,69 @@
 int num;
 int frameNumber = 0;
 const char* frames = "frames/frame_0000.bmp";
+
+
+void applyGaussianBlur(SDL_Surface* surface, int kernelSize = 5) {
+    if (SDL_MUSTLOCK(surface)) {
+        SDL_LockSurface(surface);
+    }
+
+    Uint32* pixels = (Uint32*)surface->pixels;
+    int pitch = surface->pitch / 4;
+
+    // 复制原始图像数据
+    Uint32* originalPixels = new Uint32[surface->w * surface->h];
+    std::copy(pixels, pixels + surface->w * surface->h, originalPixels);
+
+    // 5x5 高斯核 (近似)
+    float kernel[5][5] = {
+        { 1,  4,  6,  4, 1 },
+        { 4, 16, 24, 16, 4 },
+        { 6, 24, 36, 24, 6 },
+        { 4, 16, 24, 16, 4 },
+        { 1,  4,  6,  4, 1 }
+    };
+
+    float kernelSum = 256.0f; // 归一化因子
+
+    int halfKernel = kernelSize / 2;
+
+    for (int y = halfKernel; y < surface->h - halfKernel; ++y) {
+        for (int x = halfKernel; x < surface->w - halfKernel; ++x) {
+            float sumR = 0, sumG = 0, sumB = 0;
+
+            // 计算高斯模糊
+            for (int ky = -halfKernel; ky <= halfKernel; ++ky) {
+                for (int kx = -halfKernel; kx <= halfKernel; ++kx) {
+                    int nx = x + kx;
+                    int ny = y + ky;
+
+                    Uint32 pixel = originalPixels[ny * pitch + nx];
+                    Uint8 r, g, b;
+                    SDL_GetRGB(pixel, surface->format, &r, &g, &b);
+
+                    float weight = kernel[ky + halfKernel][kx + halfKernel];
+                    sumR += r * weight;
+                    sumG += g * weight;
+                    sumB += b * weight;
+                }
+            }
+
+            Uint8 finalR = std::min(255, std::max(0, (int)(sumR / kernelSum)));
+            Uint8 finalG = std::min(255, std::max(0, (int)(sumG / kernelSum)));
+            Uint8 finalB = std::min(255, std::max(0, (int)(sumB / kernelSum)));
+
+            pixels[y * pitch + x] = SDL_MapRGB(surface->format, finalR, finalG, finalB);
+        }
+    }
+
+    if (SDL_MUSTLOCK(surface)) {
+        SDL_UnlockSurface(surface);
+    }
+
+    delete[] originalPixels;
+}
+
 void adjustBrightness(SDL_Surface* surface, float brightnessFactor) {
     
     if (SDL_MUSTLOCK(surface)) {
@@ -37,37 +100,6 @@ void adjustBrightness(SDL_Surface* surface, float brightnessFactor) {
             Uint8 newB = std::min(255, (int)(b * brightnessFactor));
 
             // Set the new brighter pixel
-            pixels[y * pitch + x] = SDL_MapRGB(surface->format, newR, newG, newB);
-        }
-    }
-
-    if (SDL_MUSTLOCK(surface)) {
-        SDL_UnlockSurface(surface);
-    }
-}
-void adjustSaturation(SDL_Surface* surface, float saturationFactor) {
-    if (SDL_MUSTLOCK(surface)) {
-        SDL_LockSurface(surface);
-    }
-
-    Uint32* pixels = (Uint32*)surface->pixels;
-    int pitch = surface->pitch / 4;
-
-    for (int y = 0; y < surface->h; ++y) {
-        for (int x = 0; x < surface->w; ++x) {
-            Uint32 pixel = pixels[y * pitch + x];
-            Uint8 r, g, b;
-            SDL_GetRGB(pixel, surface->format, &r, &g, &b);
-
-            // Convert RGB to grayscale intensity
-            float intensity = 0.3f * r + 0.59f * g + 0.11f * b;
-
-            // Interpolate between grayscale and the original color based on the saturation factor
-            Uint8 newR = std::min(255, (int)(intensity + (r - intensity) * saturationFactor));
-            Uint8 newG = std::min(255, (int)(intensity + (g - intensity) * saturationFactor));
-            Uint8 newB = std::min(255, (int)(intensity + (b - intensity) * saturationFactor));
-
-            // Set the new saturated pixel
             pixels[y * pitch + x] = SDL_MapRGB(surface->format, newR, newG, newB);
         }
     }
@@ -240,15 +272,21 @@ void overlayTexture(SDL_Surface* surface, const char* texturePath) {
         return;
     }
 
+    // 转换纹理格式以匹配主图像
+    SDL_Surface* convertedTexture = SDL_ConvertSurface(texture, surface->format, 0);
+    SDL_FreeSurface(texture);
+    texture = convertedTexture;
+
     Uint32* pixels = (Uint32*)surface->pixels;
     Uint32* texturePixels = (Uint32*)texture->pixels;
 
     int pitch = surface->pitch / 4;
     int texturePitch = texture->pitch / 4;
 
+    float blendFactor = 0.2f; // 调整透明度混合值
+
     for (int y = 0; y < surface->h; ++y) {
         for (int x = 0; x < surface->w; ++x) {
-            // Map surface pixel to texture pixel
             int textureX = x % texture->w;
             int textureY = y % texture->h;
 
@@ -259,10 +297,9 @@ void overlayTexture(SDL_Surface* surface, const char* texturePath) {
             SDL_GetRGB(srcPixel, surface->format, &srcR, &srcG, &srcB);
             SDL_GetRGB(texPixel, texture->format, &texR, &texG, &texB);
 
-            // Simple blending (adjust blending weights as needed)
-            Uint8 finalR = (srcR * 1 + texR * 0.01);
-            Uint8 finalG = (srcG * 1 + texG * 0.01);
-            Uint8 finalB = (srcB * 1 + texB * 0.01);
+            Uint8 finalR = std::clamp(int(srcR * (1.0f - blendFactor) + texR * blendFactor), 0, 255);
+            Uint8 finalG = std::clamp(int(srcG * (1.0f - blendFactor) + texG * blendFactor), 0, 255);
+            Uint8 finalB = std::clamp(int(srcB * (1.0f - blendFactor) + texB * blendFactor), 0, 255);
 
             pixels[y * pitch + x] = SDL_MapRGB(surface->format, finalR, finalG, finalB);
         }
@@ -270,6 +307,7 @@ void overlayTexture(SDL_Surface* surface, const char* texturePath) {
 
     SDL_FreeSurface(texture);
 }
+
 bool fileExists(const std::string& path) {
     return std::filesystem::exists(path);
 }
@@ -351,7 +389,7 @@ int main(int argc, char* argv[]) {
     }
 
     // 初始化 SDL
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) { 
         std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
         return 1;
     }
@@ -385,14 +423,13 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        // 应用滤镜
-        applyBoxBlur(formattedImage, 9);
-        applyBoxBlur(formattedImage, 9);
-        applySobelFilter(formattedImage);
         applyPosterization(formattedImage, 12);
+        applyBoxBlur(formattedImage, 9);
+        applyGaussianBlur(formattedImage, 5);
+        applySobelFilter(formattedImage);
         overlayTexture(formattedImage, "texture.bmp");
-        adjustBrightness(formattedImage, 4.0f);
-        //adjustSaturation(formattedImage, 1.3f);
+        adjustBrightness(formattedImage, 1.5f);
+        
 
         // 获取文件名并保存
         std::string filename = std::filesystem::path(filePath).filename().string();
@@ -413,3 +450,4 @@ int main(int argc, char* argv[]) {
     SDL_Quit();
     return 0;
 }
+
