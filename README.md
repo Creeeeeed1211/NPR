@@ -12,12 +12,19 @@ make
 ./SDL2.Test
 
 Video Input:
-This project also receive video input, put the video under the NPR folder and run vtp.py file (recommend using vscode)
+This project also receive video input, put the video under the NPR folder and run vtp.py file 
+
+python vtp.py
+
 this will turn your video into a frame stream. then run in buid folder with command line
 
 ./SDL2.Test
 
-next run ptv.py (also recommend using vscode)
+next run ptv.py in NPR folder
+
+python ptv.py
+
+
 there will be a rendered video called "output_video.mp4" in the NPR folder.
 
 Notice :
