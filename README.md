@@ -9,4 +9,20 @@ make
 
 2. put the your image into the frame folder , it can be one or more images.
 3. in command line
-./SDL2.test
+./SDL2.Test
+
+Video Input:
+This project also receive video input, put the video under the NPR folder and run vtp.py file (recommend using vscode)
+this will turn your video into a frame stream. then run in buid folder with command line
+
+./SDL2.Test
+
+next run ptv.py (also recommend using vscode)
+there will be a rendered video called "output_video.mp4" in the NPR folder.
+
+Notice :
+In Bragg building lab, some of machines cannot play .mp4 file by deafualt, just change another one is the most concise solution.
+It takes time to render a video with a high frame rate, user can change the rate in vtp.py file. there will be a rendered video sample in the folder.
+
+
+
