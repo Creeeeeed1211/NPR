@@ -28,8 +28,9 @@ python ptv.py
 there will be a rendered video called "output_video.mp4" in the NPR folder.
 
 Notice :
-In Bragg building lab, some of machines cannot play .mp4 file by deafualt, just change another one is the most concise solution.
-It takes time to render a video with a high frame rate, user can change the rate in vtp.py file. there will be a rendered video sample in the folder.
+1.In Bragg building lab, some of machines cannot play .mp4 file by deafualt, just change another one is the most concise solution.
+
+2.It takes time to render a video with a high frame rate, user can change the rate in vtp.py file. There is a rendered video sample in the folder.
 
 
 
