@@ -1,0 +1,3 @@
+/uolstore/home/users/sc22s3c/NPR (copy)/build/CMakeFiles/SDL2_Test.dir
+/uolstore/home/users/sc22s3c/NPR (copy)/build/CMakeFiles/edit_cache.dir
+/uolstore/home/users/sc22s3c/NPR (copy)/build/CMakeFiles/rebuild_cache.dir
